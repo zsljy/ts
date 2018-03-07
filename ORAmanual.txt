@@ -1,0 +1,192 @@
+表闪回
+SELECT *
+  FROM RS_WATER_OVERDUE AS OF TIMESTAMP TO_TIMESTAMP('2018-02-05 15:15:00', 'yyyy-mm-dd hh24:mi:ss')
+创建备份
+ create table newtable as select * from m_dangan 
+drop恢复
+select * 
+from user_recyclebin; （查询回收站，如有内容继续）
+flashback table emp to before drop ;（表名对应修改成删除的表）
+时间范围查询
+select * 
+  from z_feiyong where zhuyuanhao='00240323'and shijian =to_date('2015-03-14 00:00:00','yyyy-MM-dd hh24:mi:ss') and jisuanjibianma='011090000A33';
+多表查询
+select * 
+  from x_yonghu e,x_yonghukeshi s ,x_keshi p where  s.keshiid = p.keshiid and p.keshimingcheng ='磁共振' and e.yonghuid = s.yonghuid;
+多表对比重复查询
+select * 
+  from t_jianyi where mingcheng in (select mingcheng  from t_jianyi1)；
+更新数据
+update 
+   z_dangan set xingming ='张全蛋' where danganid ='0004401700000001Mf';
+删除数据
+delete 
+  from z_feiyong where  danganid ='000440200000000f6m' and shoufeishijian = to_date('2014/1/22 9:49:57','YYYY-MM-DD hh24:mi:ss') and jisuanjibianma = '950030000102';
+创建表
+insert into
+  x_fujianduiying (FJDYID, XIANGMUID, JISUANJIBIANMA, CISHU, GUISHUKESHI, MENZHEN,     ZHUYUAN, SHOUFEIBILI)
+  values ('001949', 'JC021511', '25030401313000-1', 1, '', '0', '0', 100);
+锁表查询
+ select b.owner,b.object_name,a.session_id,a.locked_mode   --（第一步）
+    from v$locked_object a,dba_objects b
+  where b.object_id = a.object_id;
+ SELECT object_name, machine, s.sid, s.serial#    --（第二步）  
+    FROM gv$locked_object l, dba_objects o, gv$session s 
+  WHERE l.object_id　= o.object_id 
+    AND l.session_id = s.sid; 
+锁表解除
+  select 'alter system kill session ' ||''''|| sid||','||serial#||''''||';' from (
+  select t2.username,t2.sid,t2.serial#,t2.logon_time 
+    from v$locked_object t1,v$session t2 
+  where t1.session_id=t2.sid order by t2.logon_time);
+占用释放
+  SESSION SQL: 
+    alter system kill session 'sid, serial#'; 
+  ALTER system kill session '23, 1647'; 
+杀掉占用用户
+  alter user USERLTXYYTEST account lock;
+  select username,sid,serial# from v$session;
+  alter system kill session 'xx,xx'
+  drop user USERLTXYYTEST cascade
+创建用户
+  CREATE USER USERTEST  PROFILE DEFAULT 
+     IDENTIFIED BY "xxx" DEFAULT TABLESPACE USERS 
+     TEMPORARY TABLESPACE TEMP 
+     ACCOUNT UNLOCK;
+  GRANT UNLIMITED TABLESPACE TO USERTEST;
+  GRANT CONNECT TO USERTEST;
+  GRANT DBA TO USERTEST;
+创建dblink
+-- Drop existing database link 
+drop database link DBLINK_HYEMR1;
+-- Create database link 
+create database link DBLINK_HYEMR1
+  connect to USERLTXYY170104
+  using '(DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.100.125)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = crds3db)
+    )
+  )';
+特定条件导表
+  exp system/manager@TEST file=d:\daochu.dmp tables=（table1） query=\" where filed1 like '00%'\"
+数据泵导入
+impdp FJFQ/test@HZTEST schemas=FJFQ dumpfile =FJFQ_2017-11-06.dmp logfile=FJFQ_2017-11-06.log directory=dir_dp
+impdp test/test directory=dir_dp file=FJFQ_2017-11-06.DMP  REMAP_SCHEMA=TEST:TEST
+
+数据泵导出
+（1）登入sys或者system数据库用户，创建directory
+create directory dir_dp as 'D:\oracle\dir_dp'
+（2）在操作系统上相应的盘上创建指定的目录D:\oracle\dir_dp
+（3）授权给要导出数据的用户
+Grant read,write on directory dir_dp to lttfm;
+
+expdp lttfm/lttfm@fgisdb schemas=lttfm directory=dir_dp dumpfile =expdp_test1.dmp logfile=expdp_test1.log
+
+数据泵导出的各种模式：
+
+1、 按表模式导出：
+expdp zftang/zftang@fgisdb  tables=zftang.b$i_exch_info,zftang.b$i_manhole_info dumpfile =expdp_test2.dmp logfile=expdp_test2.log directory=dir_dp job_name=my_job
+
+2、按查询条件导出：
+expdp zftang/zftang@fgisdb  tables=zftang.b$i_exch_info dumpfile =expdp_test3.dmp logfile=expdp_test3.log directory=dir_dp job_name=my_job query='"where rownum<11"'
+
+3、按表空间导出：
+Expdp zftang/zftang@fgisdb dumpfile=expdp_tablespace.dmp tablespaces=GCOMM.DBF logfile=expdp_tablespace.log directory=dir_dp job_name=my_job
+
+4、导出方案
+Expdp zftang/zftang DIRECTORY=dir_dp DUMPFILE=schema.dmp SCHEMAS=zftang,gwm
+
+5、导出整个数据库：
+expdp zftang/zftang@fgisdb dumpfile =full.dmp full=y logfile=full.log directory=dir_dp job_name=my_job
+
+6、异地数据库导出到本地
+1，修改客户端tns
+POWER1 = 
+  (DESCRIPTION = 
+    (ADDRESS_LIST = 
+      (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.111.13)(PORT = 1521)) 
+    ) 
+    (CONNECT_DATA = 
+      (SERVER = DEDICATED) 
+      (SERVICE_NAME = power1) 
+    ) 
+  ) 
+2，创建dblink
+create public database link TESTLINK2（链接名称） connect to WANGYONG（目标用户名） identified by "123456"（目标账户密码） USING 'ORCL21'（目标库）
+3，查询客户端dump地址
+select * from dba_directories;
+4，服务端授权
+GRANT exp_full_database TO scott（导出用户）;  
+5，执行导出
+expdp test/test@TEST directory=dump(查询后添加) dumpfile=test.dmp logfile=test.LOG network_link='testlink'（服务器dblink名） schemas=user（服务器用户）
+
+删除创建的导出路径
+
+drop directory dmp
+
+IMPDP导入模式：
+1、按表导入
+p_street_area.dmp文件中的表，此文件是以gwm用户按schemas=gwm导出的：
+impdp gwm/gwm@fgisdb  dumpfile =p_street_area.dmp logfile=imp_p_street_area.log directory=dir_dp tables=p_street_area job_name=my_job
+
+2、按用户导入（可以将用户信息直接导入，即如果用户信息不存在的情况下也可以直接导入）
+impdp gwm/gwm@fgisdb schemas=gwm dumpfile =expdp_test.dmp logfile=expdp_test.log directory=dir_dp job_name=my_job
+
+3、不通过expdp的步骤生成dmp文件而直接导入的方法：
+--从源数据库中向目标数据库导入表p_street_area
+impdp gwm/gwm directory=dir_dp NETWORK_LINK=igisdb tables=p_street_area logfile=p_street_area.log  job_name=my_job
+igisdb是目的数据库与源数据的链接名，dir_dp是目的数据库上的目录
+4、更换表空间
+  采用remap_tablespace参数 
+  --导出gwm用户下的所有数据
+expdp system/orcl directory=data_pump_dir dumpfile=gwm.dmp SCHEMAS=gwm
+注：如果是用sys用户导出的用户数据，包括用户创建、授权部分，用自身用户导出则不含这些内容
+--以下是将gwm用户下的数据全部导入到表空间gcomm（原来为gmapdata表空间下）下
+impdp system/orcl directory=data_pump_dir dumpfile=gwm.dmp remap_tablespace=gmapdata:gcomm
+
+
+表空间自动扩充 
+ALTER DATABASE 
+    DATAFILE 'E:\APP\ORDB\HZTEST\FZSC_JK.DBF' AUTOEXTEND 
+    ON NEXT 100G MAXSIZE UNLIMITED; 
+表空间bolck调整
+alter tablespace tablespaceName add datafile 'D:/database/XXX01.DBF' size 30G;
+
+扩充表空间
+select file_name,bytes from dba_data_files where tablespace_name = 'SYSTEM';
+（先查询要扩充的用户）
+alter database datafile 'E:\APP\ORDB\HZTEST\SYSTEM01.DBF' resize 4096m;（4096为容量）
+alter tablespace FZSC_JK add datafile 'E:\APP\ORDB\HZTEST\SYSTEM02.DBF' size 30g;
+(可持续增加)
+普通导入导出
+imp USERTESTEMR/ltxyy@HISTEST file=H:\DBEXP\20161230ltxyy_databak\20161230emr_ltxyy.dmp full=y
+单表导出
+   exp USERLTXYY170104/ltxyy@CRDS3DB_22 file=d:\daochu2.dmp tables=(T_ZUTAO,T_ZUTAOMAPPING,T_VERSION,T_ZHIBIAO,T_JIANYI,T_JIANYIMX) 
+ imp USERLTXYYTEST/ltxyy@HISTEST file=d:\daochu2.dmp FULL=Y
+impdp his/his88889901 directory=bak dumpfile=his20140703 table_exists_action=replace
+expdp his/his88889901 directory=bak dumpfile=
+备份日期.dmp schemas=his(指定给his或emr备份)
+exp userxcfy/xcfy.crds3.2013@XITONG buffer=512000 log=E:\userxcfy1109.log file=E:\userxcfy1109.dmp
+查询/删除链接用户
+select username，sid，serial# from v$session
+alter system kill seesion'sid,serial'
+
+查询用户创建DBlink权限
+select * from user_sys_privs where privilege like upper('%DATABASE LINK%') AND USERNAME='test'
+创建用户DBlink权限
+grant create public database link to test
+
+加减法计算
+select sum(je) from 
+(select sum(m.jine) je from m_yujiaojin m where m.jiaokuanshijian >=to_date('2016-08-15','yyyy-mm-dd') and
+m.jiaokuanshijian<=to_date('2016-08-19','yyyy-mm-dd')  and m.jiaokuanyonghuid='4052' and leixing='0'
+union all
+select sum(m.jine)je from m_yujiaojin2016 m where m.jiaokuanshijian >=to_date('2016-08-15','yyyy-mm-dd') and
+m.jiaokuanshijian<=to_date('2016-08-19','yyyy-mm-dd') and m.jiaokuanyonghuid='4052' and leixing='0'
+union all
+select -sum(m.feiyong) je from m_shouju2016 m where m.jiesuanshijian >=to_date('2016-08-15','yyyy-mm-dd') and
+m.jiesuanshijian<=to_date('2016-08-19','yyyy-mm-dd') and m.jiesuanyonghuid='4052' )
+
