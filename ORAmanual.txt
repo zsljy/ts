@@ -5,8 +5,8 @@ SELECT *
  create table newtable as select * from m_dangan 
 drop恢复
 select * 
-from user_recyclebin; （查询回收站，如有内容继续）
-flashback table emp to before drop ;（表名对应修改成删除的表）
+ from user_recyclebin; （查询回收站，如有内容继续）
+ flashback table emp to before drop ;（表名对应修改成删除的表）
 时间范围查询
 select * 
   from z_feiyong where zhuyuanhao='00240323'and shijian =to_date('2015-03-14 00:00:00','yyyy-MM-dd hh24:mi:ss') and jisuanjibianma='011090000A33';
@@ -75,11 +75,12 @@ create database link DBLINK_HYEMR1
 数据泵导入
 impdp FJFQ/test@HZTEST schemas=FJFQ dumpfile =FJFQ_2017-11-06.dmp logfile=FJFQ_2017-11-06.log directory=dir_dp
 impdp test/test directory=dir_dp file=FJFQ_2017-11-06.DMP  REMAP_SCHEMA=TEST:TEST
+Impdp system/password DIRECTORY=dirdp DUMPFILE=aa.dmp FULL=y
 
 数据泵导出
 （1）登入sys或者system数据库用户，创建directory
-create directory dir_dp as 'D:\oracle\dir_dp'
-（2）在操作系统上相应的盘上创建指定的目录D:\oracle\dir_dp
+create directory dir_dp as 'D:\oracle\dirdp'
+（2）在操作系统上相应的盘上创建指定的目录D:\oracle\dirdp
 （3）授权给要导出数据的用户
 Grant read,write on directory dir_dp to lttfm;
 
